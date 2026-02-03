@@ -51,6 +51,19 @@ public class UserController {
         return org.springframework.http.ResponseEntity.ok("Students uploaded successfully");
     }
 
+    @GetMapping("/students/template")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> downloadStudentTemplate() {
+        java.io.ByteArrayInputStream in = userService.generateStudentTemplate();
+        org.springframework.core.io.InputStreamResource file = new org.springframework.core.io.InputStreamResource(in);
+
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=students_template.xlsx")
+                .contentType(org.springframework.http.MediaType
+                        .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     @GetMapping("/search/email")
     public org.springframework.http.ResponseEntity<User> getUserByEmail(
             @org.springframework.web.bind.annotation.RequestParam String email) {

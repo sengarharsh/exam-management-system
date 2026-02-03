@@ -11,15 +11,18 @@ const Results = () => {
     const [results, setResults] = useState([]);
 
     useEffect(() => {
-        if (user) fetchResults();
+        fetchResults();
     }, [user]);
 
     const fetchResults = async () => {
         try {
-            const res = await api.get(`/api/results/student/${user.id}`);
+            const studentId = user?.id || localStorage.getItem('userId');
+            if (!studentId) return;
+
+            const res = await api.get(`/api/results/student/${studentId}`);
             setResults(res.data);
         } catch (err) {
-            console.log("Error fetching results", err);
+            console.error("Error fetching results", err);
         }
     };
 

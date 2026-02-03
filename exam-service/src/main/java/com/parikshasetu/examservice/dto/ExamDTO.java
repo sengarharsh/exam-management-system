@@ -12,6 +12,8 @@ public class ExamDTO {
     private Long teacherId; // Should be extracted from JWT in Controller
     private Long courseId;
     private LocalDateTime scheduledTime;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
     private List<QuestionDTO> questions;
 
     public List<QuestionDTO> getQuestions() {
@@ -85,5 +87,21 @@ public class ExamDTO {
 
     public void setScheduledTime(LocalDateTime scheduledTime) {
         this.scheduledTime = scheduledTime;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
     }
 }

@@ -18,6 +18,22 @@ function TakeExam() {
     useEffect(() => {
         fetchExam();
 
+        // Request Full Screen
+        const enterFullScreen = async () => {
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                    await document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) { /* IE11 */
+                    await document.documentElement.msRequestFullscreen();
+                }
+            } catch (err) {
+                console.warn("Full screen request denied/failed", err);
+            }
+        };
+        enterFullScreen();
+
         // Restore answers
         const saved = localStorage.getItem(`exam_answers_${id}`);
         if (saved) setAnswers(JSON.parse(saved));
@@ -62,8 +78,15 @@ function TakeExam() {
 
         setSubmitting(true);
         try {
-            // Start logic
-            const start = await api.post(`/api/submissions/start?examId=${exam.id}&studentId=${user.id}`);
+            const studentId = user?.id || localStorage.getItem('userId');
+            if (!studentId) {
+                alert("Error: Student ID not found. Please re-login.");
+                setSubmitting(false);
+                return;
+            }
+
+            // Start submission session
+            const start = await api.post(`/api/submissions/start?examId=${exam.id}&studentId=${studentId}`);
             const submissionId = start.data.id;
 
             let score = 0;
@@ -77,11 +100,12 @@ function TakeExam() {
             else alert(`Exam Submitted! Your Score: ${score}`);
 
             localStorage.removeItem(`exam_answers_${id}`);
-            navigate("/dashboard");
+            const role = localStorage.getItem('role');
+            navigate(role === 'STUDENT' ? "/student" : "/dashboard");
 
         } catch (err) {
-            console.log(err);
-            alert("Submit Failed");
+            console.error(err);
+            alert("Submit Failed: " + (err.response?.data?.message || err.message));
             setSubmitting(false);
         }
     };
@@ -89,13 +113,20 @@ function TakeExam() {
     if (!exam) return <div className="p-10">Loading exam...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto py-8">
-            <div className="bg-white shadow sm:rounded-lg mb-6 sticky top-20 z-10 border-b border-gray-200">
-                <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto py-8">
+            <div className="bg-white shadow-lg rounded-2xl mb-6 sticky top-20 z-10 border border-slate-200">
+                <div className="px-6 py-5 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900">{exam.title}</h2>
-                        <div className="flex items-center mt-1">
-                            {warnings > 0 && <span className="text-red-500 font-bold flex items-center text-sm mr-4"><AlertTriangle size={16} className="mr-1" /> Warnings: {warnings}/3</span>}
+                        <h2 className="text-2xl font-bold text-slate-900">{exam.title}</h2>
+                        <div className="flex items-center mt-2">
+                            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                                <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded">
+                                    {exam.questions.length} Questions
+                                </span>
+                                <span>•</span>
+                                <span>{exam.totalMarks} Total Marks</span>
+                            </div>
+                            {warnings > 0 && <span className="ml-4 text-red-600 font-bold flex items-center text-sm border border-red-200 bg-red-50 px-2 py-0.5 rounded"><AlertTriangle size={16} className="mr-1" /> Warnings: {warnings}/3</span>}
                         </div>
                     </div>
                     <div>
@@ -125,9 +156,13 @@ function TakeExam() {
                 ))}
             </div>
 
-            <div className="mt-8 flex justify-end">
-                <button onClick={() => handleSubmit(false)} disabled={submitting} className="px-6 py-3 bg-green-600 text-white rounded-md shadow-sm">
-                    {submitting ? 'Submitting...' : 'Submit Exam'}
+            <div className="mt-10 flex justify-end pb-20">
+                <button
+                    onClick={() => handleSubmit(false)}
+                    disabled={submitting}
+                    className={`px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5 transition-all ${submitting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                >
+                    {submitting ? 'Submitting...' : 'Submit Answers'}
                 </button>
             </div>
         </div>

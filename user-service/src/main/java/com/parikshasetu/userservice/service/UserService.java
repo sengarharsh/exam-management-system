@@ -21,4 +21,6 @@ public interface UserService {
     void approveUser(Long id);
 
     void bulkRegisterStudents(org.springframework.web.multipart.MultipartFile file);
+
+    java.io.ByteArrayInputStream generateStudentTemplate();
 }

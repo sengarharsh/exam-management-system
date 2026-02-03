@@ -60,4 +60,29 @@ public class ExamController {
     public ResponseEntity<List<Exam>> getExamsByCourses(@RequestBody List<Long> courseIds) {
         return ResponseEntity.ok(examService.getExamsForCourses(courseIds));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteExam(@PathVariable Long id) {
+        examService.deleteExam(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/parse-questions")
+    public ResponseEntity<List<QuestionDTO>> parseQuestions(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return ResponseEntity.ok(examService.parseQuestionsFromExcel(file));
+    }
+
+    @GetMapping("/template")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadTemplate() {
+        java.io.ByteArrayInputStream in = examService.generateQuestionTemplate();
+        org.springframework.core.io.InputStreamResource file = new org.springframework.core.io.InputStreamResource(in);
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=questions_template.xlsx")
+                .contentType(org.springframework.http.MediaType
+                        .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
 }

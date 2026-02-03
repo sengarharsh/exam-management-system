@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
-import { Plus, Trash, Save } from 'lucide-react';
+import { Plus, Trash, Save, Upload, FileText, Download } from 'lucide-react';
 import Card from '../components/Card';
+import Modal from '../components/Modal';
 
 const CreateExam = () => {
     const navigate = useNavigate();
@@ -12,12 +13,20 @@ const CreateExam = () => {
         title: '',
         description: '',
         durationMinutes: 60,
-        courseId: ''
+        courseId: '',
+        startTime: '',
+        endTime: ''
     });
     const [questions, setQuestions] = useState([
         { text: '', optionA: '', optionB: '', optionC: '', optionD: '', correctOption: 'A', marks: 5 }
     ]);
     const [loading, setLoading] = useState(false);
+
+    // Upload State
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [uploadFile, setUploadFile] = useState(null);
+    const [defaultMarks, setDefaultMarks] = useState(5);
+    const [parsing, setParsing] = useState(false);
 
     React.useEffect(() => {
         const fetchCourses = async () => {
@@ -49,6 +58,58 @@ const CreateExam = () => {
         setQuestions(questions.filter((_, i) => i !== index));
     };
 
+    const handleUploadQuestions = async (e) => {
+        e.preventDefault();
+        if (!uploadFile) {
+            toast.error("Please select a file");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", uploadFile);
+
+        setParsing(true);
+        try {
+            const res = await api.post('/api/exams/parse-questions', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            // Map result to ensure correct format and apply default marks if valid marks not found
+            const parsedQuestions = res.data.map(q => ({
+                text: q.text,
+                optionA: q.optionA,
+                optionB: q.optionB,
+                optionC: q.optionC,
+                optionD: q.optionD,
+                correctOption: q.correctOption,
+                marks: q.marks > 0 ? q.marks : defaultMarks
+            }));
+
+            if (parsedQuestions.length > 0) {
+                if (questions.length === 1 && questions[0].text === '') {
+                    setQuestions(parsedQuestions);
+                } else {
+                    if (window.confirm(`Found ${parsedQuestions.length} questions. Append to existing or Replace? (OK for Append, Cancel for Replace)`)) {
+                        setQuestions([...questions, ...parsedQuestions]);
+                    } else {
+                        setQuestions(parsedQuestions);
+                    }
+                }
+                toast.success(`Loaded ${parsedQuestions.length} questions!`);
+                setShowUploadModal(false);
+                setUploadFile(null);
+            } else {
+                toast.error("No valid questions found in file.");
+            }
+
+        } catch (err) {
+            toast.error("Failed to parse file.");
+            console.error(err);
+        } finally {
+            setParsing(false);
+        }
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -62,16 +123,22 @@ const CreateExam = () => {
                 return;
             }
 
+            if (!examData.courseId) {
+                toast.error("Please select a course for this exam.");
+                setLoading(false);
+                return;
+            }
+
             const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
 
             const payload = {
                 ...examData,
-                courseId: examData.courseId ? parseInt(examData.courseId) : null,
+                courseId: parseInt(examData.courseId),
                 totalMarks,
                 teacherId: parseInt(teacherId),
                 questions: questions
             };
-            // Assuming endpoint is POST /api/exams
+
             await api.post('/api/exams', payload);
             toast.success("Exam Created Successfully!");
             navigate('/dashboard');
@@ -92,18 +159,19 @@ const CreateExam = () => {
                 <Card title="Exam Details">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Link to Course (Optional)</label>
+                            <label className="block text-sm font-medium text-gray-700">Select Course <span className="text-red-500">*</span></label>
                             <select
                                 value={examData.courseId}
+                                required
                                 onChange={(e) => setExamData({ ...examData, courseId: e.target.value })}
                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             >
-                                <option value="">-- Connect to a Course --</option>
+                                <option value="">-- Select a Course --</option>
                                 {courses.map(course => (
                                     <option key={course.id} value={course.id}>{course.title} ({course.code})</option>
                                 ))}
                             </select>
-                            <p className="mt-1 text-xs text-gray-500">Linking an exam to a course makes it visible to all approved students in that course.</p>
+                            <p className="mt-1 text-xs text-gray-500">The exam will be assigned to all students enrolled in this course.</p>
                         </div>
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700">Exam Title</label>
@@ -133,16 +201,43 @@ const CreateExam = () => {
                                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             />
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Start Time</label>
+                            <input
+                                type="datetime-local"
+                                value={examData.startTime}
+                                onChange={(e) => setExamData({ ...examData, startTime: e.target.value })}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">End Time (Deadline)</label>
+                            <input
+                                type="datetime-local"
+                                value={examData.endTime}
+                                onChange={(e) => setExamData({ ...examData, endTime: e.target.value })}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            />
+                        </div>
                     </div>
                 </Card>
 
                 {/* Questions */}
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
                         <h2 className="text-lg font-medium text-gray-900">Questions ({questions.length})</h2>
-                        <button type="button" onClick={addQuestion} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">
-                            <Plus size={16} className="mr-2" /> Add Question
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowUploadModal(true)}
+                                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                            >
+                                <Upload size={16} className="mr-2" /> Upload Excel
+                            </button>
+                            <button type="button" onClick={addQuestion} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200">
+                                <Plus size={16} className="mr-2" /> Add Manually
+                            </button>
+                        </div>
                     </div>
 
                     {questions.map((q, index) => (
@@ -215,6 +310,58 @@ const CreateExam = () => {
                     </button>
                 </div>
             </form>
+
+            <Modal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} title="Upload Questions">
+                <form onSubmit={handleUploadQuestions} className="space-y-4">
+                    <div className="bg-blue-50 p-4 rounded text-sm text-blue-800">
+                        <h4 className="font-bold">Excel Values Required:</h4>
+                        <p>Format: <strong>.xlsx</strong></p>
+                        <ul className="list-decimal pl-5 mt-1 space-y-1">
+                            <li>Question Text</li>
+                            <li>Option A</li>
+                            <li>Option B</li>
+                            <li>Option C</li>
+                            <li>Option D</li>
+                            <li>Correct Answer (A/B/C/D)</li>
+                            <li>Marks (Optional)</li>
+                        </ul>
+                        <button
+                            type="button"
+                            onClick={() => window.open("http://localhost:8082/api/exams/template", "_blank")}
+                            className="mt-2 text-blue-600 underline font-semibold flex items-center"
+                        >
+                            <Download size={16} className="mr-1" /> Download Question Template
+                        </button>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Default Marks per Question</label>
+                        <input
+                            type="number" min="1" value={defaultMarks}
+                            onChange={(e) => setDefaultMarks(parseInt(e.target.value))}
+                            className="mt-1 w-20 border border-gray-300 rounded p-1"
+                        />
+                        <p className="text-xs text-gray-500">Used if marks missing in file.</p>
+                    </div>
+
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <label className="mt-2 block text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-500">
+                            <span>Select Excel File</span>
+                            <input type="file" className="hidden" accept=".xlsx, .xls" onChange={(e) => setUploadFile(e.target.files[0])} />
+                        </label>
+                        {uploadFile && <p className="mt-2 text-sm text-gray-500">{uploadFile.name}</p>}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={parsing || !uploadFile}
+                        className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+                    >
+                        {parsing ? 'Parsing...' : 'Upload & Populate'}
+                    </button>
+                </form>
+            </Modal>
         </div>
     );
 };

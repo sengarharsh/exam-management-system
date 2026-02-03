@@ -14,7 +14,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import Results from './pages/Results';
 import Students from './pages/Students';
 import TeacherCourses from './pages/TeacherCourses';
+import TeacherExams from './pages/TeacherExams';
 import StudentCourses from './pages/StudentCourses';
+import StudentExams from './pages/StudentExams';
+import TeacherLeaderboard from './pages/TeacherLeaderboard';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
@@ -47,12 +50,20 @@ function App() {
             element={<Layout><TeacherCourses /></Layout>}
           />
           <Route
+            path="/teacher-exams"
+            element={<Layout><TeacherExams /></Layout>}
+          />
+          <Route
             path="/student"
             element={<Layout><StudentDashboard /></Layout>}
           />
           <Route
             path="/student-courses"
             element={<Layout><StudentCourses /></Layout>}
+          />
+          <Route
+            path="/student-exams"
+            element={<Layout><StudentExams /></Layout>}
           />
 
           {/* Fallback for legacy dashboard link */}
@@ -95,6 +106,10 @@ function App() {
           <Route
             path="/students"
             element={<Layout><Students /></Layout>}
+          />
+          <Route
+            path="/teacher-leaderboard"
+            element={<Layout><TeacherLeaderboard /></Layout>}
           />
 
           <Route

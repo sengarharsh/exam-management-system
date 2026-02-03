@@ -108,6 +108,7 @@ public class CourseService {
     }
 
     public void bulkEnroll(Long courseId, org.springframework.web.multipart.MultipartFile file) {
+        System.out.println("CourseService: bulkEnroll called for course " + courseId);
         try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(
                 file.getInputStream())) {
             org.apache.poi.ss.usermodel.Sheet sheet = workbook.getSheetAt(0);
@@ -115,9 +116,13 @@ public class CourseService {
                 if (row.getRowNum() == 0)
                     continue; // Skip header
 
-                org.apache.poi.ss.usermodel.Cell emailCell = row.getCell(0);
+                org.apache.poi.ss.usermodel.Cell nameCell = row.getCell(0);
+                org.apache.poi.ss.usermodel.Cell emailCell = row.getCell(1);
+
                 if (emailCell != null) {
                     String email = emailCell.getStringCellValue().trim();
+                    String fullName = (nameCell != null) ? nameCell.getStringCellValue().trim() : "Student";
+
                     if (!email.isEmpty()) {
                         try {
                             String userServiceUrl = "http://user-service/api/users/search/email?email=" + email;
@@ -134,7 +139,7 @@ public class CourseService {
                                 // User not found, register them
                                 String registerUrl = "http://user-service/api/auth/register";
                                 java.util.Map<String, Object> registerRequest = new java.util.HashMap<>();
-                                registerRequest.put("fullName", "Student"); // Default name
+                                registerRequest.put("fullName", fullName.isEmpty() ? "Student" : fullName);
                                 registerRequest.put("email", email);
                                 registerRequest.put("password", "123456");
                                 registerRequest.put("role", "STUDENT");
@@ -167,6 +172,28 @@ public class CourseService {
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to process Excel file: " + e.getMessage());
+        }
+    }
+
+    public java.io.ByteArrayInputStream generateStudentTemplate() {
+        try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Students");
+
+            // Header Row
+            org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Student Full Name");
+            headerRow.createCell(1).setCellValue("Student Email");
+
+            // Sample Row
+            org.apache.poi.ss.usermodel.Row sampleRow = sheet.createRow(1);
+            sampleRow.createCell(0).setCellValue("John Doe");
+            sampleRow.createCell(1).setCellValue("student@example.com");
+
+            workbook.write(out);
+            return new java.io.ByteArrayInputStream(out.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate template: " + e.getMessage());
         }
     }
 }

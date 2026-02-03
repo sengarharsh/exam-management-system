@@ -37,4 +37,14 @@ public class ResultController {
     public ResponseEntity<List<Result>> getAllResults() {
         return ResponseEntity.ok(resultService.getAllResults());
     }
+
+    @GetMapping("/exam/{examId}")
+    public ResponseEntity<List<Result>> getResultsByExamId(@PathVariable Long examId) {
+        return ResponseEntity.ok(resultService.getResultsByExamId(examId));
+    }
+
+    @PostMapping("/by-exams")
+    public ResponseEntity<List<Result>> getResultsByExamIds(@RequestBody List<Long> examIds) {
+        return ResponseEntity.ok(resultService.getResultsByExamIds(examIds));
+    }
 }

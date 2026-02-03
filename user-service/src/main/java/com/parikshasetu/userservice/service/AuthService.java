@@ -45,8 +45,10 @@ public class AuthService {
         // Auto-approve Students, but Teachers need approval
         if (request.getRole() == com.parikshasetu.userservice.model.Role.TEACHER) {
             user.setStatus(com.parikshasetu.userservice.model.Status.PENDING);
+            user.setVerified(false);
         } else {
             user.setStatus(com.parikshasetu.userservice.model.Status.APPROVED);
+            user.setVerified(true);
         }
 
         userRepository.save(user);

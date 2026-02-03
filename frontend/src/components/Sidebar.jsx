@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, BarChart2, User, FilePlus, Users, Trophy } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BarChart2, User, FilePlus, Users, Trophy, FileText } from 'lucide-react';
 
 const Sidebar = () => {
     const location = useLocation();
@@ -18,8 +18,10 @@ const Sidebar = () => {
         links = [
             { name: 'Dashboard', path: '/teacher', icon: <LayoutDashboard size={20} /> },
             { name: 'My Courses', path: '/teacher-courses', icon: <BookOpen size={20} /> },
+            { name: 'My Exams', path: '/teacher-exams', icon: <FileText size={20} /> },
             { name: 'Create Exam', path: '/create-exam', icon: <FilePlus size={20} /> },
             { name: 'Students', path: '/students', icon: <Users size={20} /> },
+            { name: 'Leaderboard', path: '/teacher-leaderboard', icon: <Trophy size={20} /> },
             { name: 'Profile', path: '/profile', icon: <User size={20} /> }
         ];
     } else {
@@ -27,6 +29,7 @@ const Sidebar = () => {
         links = [
             { name: 'Dashboard', path: '/student', icon: <LayoutDashboard size={20} /> },
             { name: 'My Courses', path: '/student-courses', icon: <BookOpen size={20} /> },
+            { name: 'My Exams', path: '/student-exams', icon: <FileText size={20} /> },
             { name: 'Results', path: '/results', icon: <BarChart2 size={20} /> },
             { name: 'Leaderboard', path: '/leaderboard', icon: <Trophy size={20} /> },
             { name: 'Profile', path: '/profile', icon: <User size={20} /> }

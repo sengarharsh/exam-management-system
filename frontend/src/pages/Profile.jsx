@@ -48,7 +48,7 @@ const Profile = () => {
                             {role ? role.charAt(0) : 'U'}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-gray-900">{user?.fullName || 'User Name'}</h2>
+                            <h2 className="text-xl font-bold text-gray-900">{user?.fullName || localStorage.getItem('fullName') || 'User Name'}</h2>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 {role}
                             </span>
@@ -58,11 +58,11 @@ const Profile = () => {
                     <div className="space-y-4">
                         <div className="flex items-center text-gray-600">
                             <User className="h-5 w-5 mr-3 text-gray-400" />
-                            <span>{user?.fullName || 'N/A'}</span>
+                            <span>{user?.fullName || localStorage.getItem('fullName') || 'N/A'}</span>
                         </div>
                         <div className="flex items-center text-gray-600">
                             <Mail className="h-5 w-5 mr-3 text-gray-400" />
-                            <span>{user?.email || 'user@example.com'}</span>
+                            <span>{user?.email || localStorage.getItem('email') || 'user@example.com'}</span>
                         </div>
                         <div className="flex items-center text-gray-600">
                             <Shield className="h-5 w-5 mr-3 text-gray-400" />

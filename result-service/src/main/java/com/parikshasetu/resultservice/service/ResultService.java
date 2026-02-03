@@ -45,4 +45,12 @@ public class ResultService {
     public List<Result> getAllResults() {
         return resultRepository.findAll();
     }
+
+    public List<Result> getResultsByExamId(Long examId) {
+        return resultRepository.findByExamId(examId);
+    }
+
+    public List<Result> getResultsByExamIds(List<Long> examIds) {
+        return resultRepository.findByExamIdIn(examIds);
+    }
 }

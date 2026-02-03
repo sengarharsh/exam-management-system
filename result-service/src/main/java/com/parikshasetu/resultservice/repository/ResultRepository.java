@@ -8,4 +8,6 @@ public interface ResultRepository extends JpaRepository<Result, Long> {
     List<Result> findByStudentId(Long studentId);
 
     List<Result> findByExamId(Long examId);
+
+    List<Result> findByExamIdIn(List<Long> examIds);
 }

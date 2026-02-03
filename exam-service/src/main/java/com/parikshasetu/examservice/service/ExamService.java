@@ -36,6 +36,8 @@ public class ExamService {
         exam.setTeacherId(dto.getTeacherId());
         exam.setCourseId(dto.getCourseId());
         exam.setScheduledTime(dto.getScheduledTime());
+        exam.setStartTime(dto.getStartTime());
+        exam.setEndTime(dto.getEndTime());
         exam.setActive(true);
 
         Exam savedExam = examRepository.save(exam);
@@ -143,6 +145,124 @@ public class ExamService {
             enrollment.setExamId(examId);
             enrollment.setStudentId(studentId);
             enrollmentRepository.save(enrollment);
+        }
+    }
+
+    public void deleteExam(Long id) {
+        examRepository.deleteById(id);
+    }
+
+    public List<QuestionDTO> parseQuestionsFromExcel(org.springframework.web.multipart.MultipartFile file) {
+        List<QuestionDTO> questions = new java.util.ArrayList<>();
+        try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(
+                file.getInputStream())) {
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.getSheetAt(0);
+            java.util.Iterator<org.apache.poi.ss.usermodel.Row> rows = sheet.iterator();
+
+            // Skip header
+            if (rows.hasNext()) {
+                rows.next();
+            }
+
+            while (rows.hasNext()) {
+                org.apache.poi.ss.usermodel.Row currentRow = rows.next();
+                try {
+                    // Columns: 0:Text, 1:A, 2:B, 3:C, 4:D, 5:Correct(A/B/C/D), 6:Marks(Opt)
+                    String text = getCellValue(currentRow.getCell(0));
+                    if (text == null || text.trim().isEmpty())
+                        continue;
+
+                    QuestionDTO q = new QuestionDTO();
+                    q.setText(text);
+                    q.setOptionA(getCellValue(currentRow.getCell(1)));
+                    q.setOptionB(getCellValue(currentRow.getCell(2)));
+                    q.setOptionC(getCellValue(currentRow.getCell(3)));
+                    q.setOptionD(getCellValue(currentRow.getCell(4)));
+
+                    String correct = getCellValue(currentRow.getCell(5));
+                    if (correct != null)
+                        correct = correct.trim().toUpperCase();
+                    // Validate A,B,C,D
+                    if (correct != null && (correct.equals("A") || correct.equals("B") || correct.equals("C")
+                            || correct.equals("D"))) {
+                        q.setCorrectOption(correct);
+                    } else {
+                        q.setCorrectOption("A"); // Default or error
+                    }
+
+                    String marksStr = getCellValue(currentRow.getCell(6));
+                    int marks = -1; // -1 indicates not set
+                    if (marksStr != null && !marksStr.isEmpty()) {
+                        try {
+                            // Can be "5.0"
+                            double d = Double.parseDouble(marksStr);
+                            marks = (int) d;
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
+                    if (marks > 0) {
+                        q.setMarks(marks);
+                    } else {
+                        q.setMarks(null); // Let frontend set default
+                    }
+
+                    questions.add(q);
+                } catch (Exception e) {
+                    System.err.println("Skipping row: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
+        }
+        return questions;
+    }
+
+    public java.io.ByteArrayInputStream generateQuestionTemplate() {
+        try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Questions");
+
+            // Header Row
+            org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(0);
+            String[] columns = { "Question Text", "Option A", "Option B", "Option C", "Option D",
+                    "Correct Option (A/B/C/D)", "Marks (Optional)" };
+            for (int i = 0; i < columns.length; i++) {
+                org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+            }
+
+            // Sample Row
+            org.apache.poi.ss.usermodel.Row sampleRow = sheet.createRow(1);
+            sampleRow.createCell(0).setCellValue("What is 2 + 2?");
+            sampleRow.createCell(1).setCellValue("3");
+            sampleRow.createCell(2).setCellValue("4");
+            sampleRow.createCell(3).setCellValue("5");
+            sampleRow.createCell(4).setCellValue("6");
+            sampleRow.createCell(5).setCellValue("B");
+            sampleRow.createCell(6).setCellValue(5);
+
+            workbook.write(out);
+            return new java.io.ByteArrayInputStream(out.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate template: " + e.getMessage());
+        }
+    }
+
+    private String getCellValue(org.apache.poi.ss.usermodel.Cell cell) {
+        if (cell == null)
+            return "";
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf(cell.getNumericCellValue()); // May return "5.0"
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA:
+                return cell.getCellFormula();
+            default:
+                return "";
         }
     }
 }

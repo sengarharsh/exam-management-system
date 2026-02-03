@@ -9,39 +9,52 @@ import { useAuth } from '../context/AuthContext';
 function StudentDashboard() {
     const { user } = useAuth();
     const [exams, setExams] = useState([]);
+    const [courses, setCourses] = useState([]); // Added state for debug
     const [results, setResults] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (user) {
-            fetchExams();
-            fetchResults();
-        }
+        fetchExams();
+        fetchResults();
     }, [user]);
 
     const fetchExams = async () => {
         try {
-            // 1. Fetch Enrolled Courses
-            const coursesRes = await api.get(`/api/courses/my/${user.id}`);
-            const courses = coursesRes.data;
+            const studentId = user?.id || localStorage.getItem('userId');
+            if (!studentId) {
+                console.error("Student ID not found in context or localStorage");
+                return;
+            }
 
-            if (courses.length > 0) {
+            // 1. Fetch Enrolled Courses
+            console.log("Fetching courses for student:", studentId);
+            const coursesRes = await api.get(`/api/courses/my/${studentId}`);
+            const fetchedCourses = coursesRes.data;
+            console.log("Fetched courses:", fetchedCourses);
+            setCourses(fetchedCourses); // Store for UI
+
+            if (fetchedCourses.length > 0) {
                 // 2. Fetch Exams for these courses
-                const courseIds = courses.map(c => c.courseId);
+                const courseIds = fetchedCourses.map(c => c.courseId);
+                console.log("Fetching exams for course IDs:", courseIds);
                 const examsRes = await api.post('/api/exams/by-courses', courseIds);
+                console.log("Fetched exams:", examsRes.data);
                 setExams(examsRes.data);
             } else {
+                console.log("No enrolled courses found for student.");
                 setExams([]);
             }
         } catch (error) {
             console.error('Error fetching exams', error);
-            // Fallback to legacy/direct assignments if needed, or leave empty
         }
     };
 
     const fetchResults = async () => {
         try {
-            const res = await api.get(`/api/results/student/${user.id}`);
+            const studentId = user?.id || localStorage.getItem('userId');
+            if (!studentId) return;
+
+            const res = await api.get(`/api/results/student/${studentId}`);
             setResults(res.data);
         } catch (err) {
             console.log("Result fetch error");
@@ -80,19 +93,38 @@ function StudentDashboard() {
             </div>
 
             {/* Analytics Component */}
-            <Analytics results={results} />
+            {/* Analytics Component */}
+            {/* <Analytics results={results} /> */}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 <Card title="Available Exams">
-                    {exams.length === 0 ? <p className="text-gray-500">No exams found.</p> : (
+                    {/* Debug Info */}
+
+
+                    {courses.length === 0 ? (
+                        <div className="text-center py-6 text-gray-500">
+                            <p>You are not enrolled in any courses.</p>
+                            <button onClick={() => navigate('/student-courses')} className="mt-2 text-blue-600 underline">Browse Courses</button>
+                        </div>
+                    ) : exams.filter(e => !results.some(r => r.examId === e.id)).length === 0 ? (
+                        <p className="text-gray-500">No exams found for your enrolled courses.</p>
+                    ) : (
                         <ul className="divide-y divide-gray-200">
-                            {exams.map(exam => (
-                                <li key={exam.id} className="py-4 flex justify-between items-center">
+                            {exams.filter(e => !results.some(r => r.examId === e.id)).map(exam => (
+                                <li key={exam.id} className="py-6 flex justify-between items-center hover:bg-gray-50 transition-colors px-4 rounded-lg -mx-4 group">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{exam.title}</p>
-                                        <p className="text-sm text-gray-500">{exam.durationMinutes} mins</p>
+                                        <p className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{exam.title}</p>
+                                        <div className="flex items-center mt-1 text-gray-500">
+                                            <span className="mr-4">⏱ {exam.durationMinutes} mins</span>
+                                            <span>📝 {exam.totalMarks} Marks</span>
+                                        </div>
                                     </div>
-                                    <button onClick={() => navigate(`/exam/${exam.id}`)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Start</button>
+                                    <button
+                                        onClick={() => navigate(`/exam/${exam.id}`)}
+                                        className="px-8 py-3 bg-blue-600 text-white rounded-lg text-lg font-bold hover:bg-blue-700 shadow-md transition-all hover:-translate-y-0.5"
+                                    >
+                                        Start
+                                    </button>
                                 </li>
                             ))}
                         </ul>

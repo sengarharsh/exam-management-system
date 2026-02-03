@@ -102,13 +102,13 @@ public class UserServiceImpl implements UserService {
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
                 try {
-                    // Cell 0: Full Name, Cell 1: Email, Cell 2: Password (Optional, default 123456)
+                    // Cell 0: Full Name, Cell 1: Email, Cell 2: Password
                     String fullName = getCellValue(currentRow.getCell(0));
                     String email = getCellValue(currentRow.getCell(1));
                     String passwordRaw = getCellValue(currentRow.getCell(2));
 
                     if (email == null || email.isEmpty() || userRepository.existsByEmail(email)) {
-                        continue; // Skip invalid or existing
+                        continue;
                     }
 
                     if (passwordRaw == null || passwordRaw.isEmpty()) {
@@ -143,6 +143,31 @@ public class UserServiceImpl implements UserService {
                 return String.valueOf((int) cell.getNumericCellValue());
             default:
                 return "";
+        }
+    }
+
+    @Override
+    public java.io.ByteArrayInputStream generateStudentTemplate() {
+        try (Workbook workbook = new XSSFWorkbook();
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Students");
+
+            // Header Row
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Full Name");
+            headerRow.createCell(1).setCellValue("Email");
+            headerRow.createCell(2).setCellValue("Password");
+
+            // Sample Row
+            Row sampleRow = sheet.createRow(1);
+            sampleRow.createCell(0).setCellValue("John Doe");
+            sampleRow.createCell(1).setCellValue("student@example.com");
+            sampleRow.createCell(2).setCellValue("password123");
+
+            workbook.write(out);
+            return new java.io.ByteArrayInputStream(out.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate template: " + e.getMessage());
         }
     }
 }

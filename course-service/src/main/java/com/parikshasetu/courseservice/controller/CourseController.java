@@ -86,4 +86,17 @@ public class CourseController {
             return ResponseEntity.internalServerError().body("Failed to upload students: " + e.getMessage());
         }
     }
+
+    @GetMapping("/template/students")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadStudentTemplate() {
+        java.io.ByteArrayInputStream in = courseService.generateStudentTemplate();
+        org.springframework.core.io.InputStreamResource file = new org.springframework.core.io.InputStreamResource(in);
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=students_template.xlsx")
+                .contentType(org.springframework.http.MediaType
+                        .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
 }

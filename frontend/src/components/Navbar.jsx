@@ -52,8 +52,10 @@ const Navbar = () => {
 
     return (
         <header className="h-16 bg-white shadow-sm fixed top-0 w-full z-30 flex items-center justify-between px-6 md:pl-72 transition-all duration-300">
-            <div className="text-gray-500 text-sm md:text-base font-medium">
-                Welcome back, <span className="text-gray-900">{user?.fullName || role || 'User'}</span>
+            <div className="text-gray-500 text-sm md:text-base font-medium flex items-center gap-2">
+                <span>Welcome back,</span>
+                <span className="font-bold text-blue-600">{role}</span>
+                <span className="text-gray-900 font-semibold">{user?.fullName || localStorage.getItem('fullName') || ''}</span>
             </div>
             <div className="flex items-center space-x-6">
 
